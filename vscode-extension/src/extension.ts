@@ -19,6 +19,7 @@ let server: http.Server | null = null;
 let statusBarItem: vscode.StatusBarItem;
 let statusViewProvider: StatusViewProvider;
 let lastPendingRequest: AskRequest | null = null; // 保存最近的待处理请求
+let lastPendingRequestTime: number = 0; // 请求时间戳，用于判断请求是否过期
 
 /**
  * 侧边栏状态视图
@@ -253,8 +254,11 @@ async function sendResponseToMCP(
 async function showAskContinueDialog(request: AskRequest): Promise<void> {
   // 保存当前请求，以便重新打开
   lastPendingRequest = request;
+  lastPendingRequestTime = Date.now();
   
-  const panel = vscode.window.createWebviewPanel(
+  let panel: vscode.WebviewPanel;
+  try {
+    panel = vscode.window.createWebviewPanel(
     "askContinue",
     "继续对话?",
     vscode.ViewColumn.One,
@@ -265,6 +269,18 @@ async function showAskContinueDialog(request: AskRequest): Promise<void> {
   );
 
   panel.webview.html = getWebviewContent(request.reason, request.requestId);
+  } catch (err) {
+    // Webview 创建失败，发送取消响应
+    console.error("[Ask Continue] Failed to create webview panel:", err);
+    lastPendingRequest = null;
+    try {
+      await sendResponseToMCP(request.requestId, "", true, request.callbackPort);
+    } catch {
+      // 忽略发送错误
+    }
+    vscode.window.showErrorMessage(`Ask Continue: 无法创建对话窗口 - ${err instanceof Error ? err.message : "未知错误"}`);
+    return;
+  }
 
   // 标记是否已发送响应，避免重复发送
   let responseSent = false;
@@ -317,6 +333,10 @@ async function showAskContinueDialog(request: AskRequest): Promise<void> {
 
   // Handle panel close (treat as cancel only if no response sent yet)
   panel.onDidDispose(async () => {
+    // 清除待处理请求（无论是否已发送响应）
+    if (lastPendingRequest?.requestId === request.requestId) {
+      lastPendingRequest = null;
+    }
     if (responseSent) return;
     try {
       await sendResponseToMCP(request.requestId, "", true, request.callbackPort);
@@ -741,20 +761,27 @@ function startServer(port: number, retryCount = 0): void {
         body += chunk.toString();
       });
 
-      req.on("end", () => {
+      req.on("end", async () => {
         try {
           const request = JSON.parse(body) as AskRequest;
 
           if (request.type === "ask_continue") {
-            // Show dialog
-            showAskContinueDialog(request);
-            
-            // Update request count in sidebar
-            statusViewProvider?.incrementRequestCount();
+            // Show dialog with error handling
+            try {
+              // 使用 await 确保 webview 创建完成
+              await showAskContinueDialog(request);
+              
+              // Update request count in sidebar
+              statusViewProvider?.incrementRequestCount();
 
-            // Immediately respond that we received the request
-            res.writeHead(200, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ success: true }));
+              // Respond that we received the request
+              res.writeHead(200, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({ success: true }));
+            } catch (dialogErr) {
+              console.error("[Ask Continue] Error showing dialog:", dialogErr);
+              res.writeHead(500, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({ error: "Failed to show dialog", details: String(dialogErr) }));
+            }
           } else {
             res.writeHead(400, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: "Unknown request type" }));
@@ -980,6 +1007,13 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("askContinue.openPanel", () => {
       if (lastPendingRequest) {
+        // 检查请求是否过期（10分钟）
+        const REQUEST_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+        if (Date.now() - lastPendingRequestTime > REQUEST_TIMEOUT) {
+          lastPendingRequest = null;
+          vscode.window.showWarningMessage("Ask Continue: 待处理的请求已过期");
+          return;
+        }
         showAskContinueDialog(lastPendingRequest);
       } else {
         vscode.window.showInformationMessage("Ask Continue: 没有待处理的对话请求");

@@ -180,6 +180,12 @@ async def request_user_input(reason: str) -> str:
                         connected = True
                         print(f"[MCP] 已连接到扩展端口 {port}", file=sys.stderr)
                         break
+                elif response.status_code == 500:
+                    # 扩展返回错误，可能是 webview 创建失败
+                    result = response.json()
+                    last_error = f"扩展返回错误: {result.get('error', '未知')} - {result.get('details', '')}"
+                    print(f"[MCP] 端口 {port} 返回错误: {last_error}", file=sys.stderr)
+                    continue
         except httpx.ConnectError:
             last_error = f"无法连接到端口 {port}"
             continue
