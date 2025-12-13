@@ -130,7 +130,7 @@ pip install -r requirements.txt
 1. 打开 Windsurf
 2. 按 `Ctrl+Shift+P` 打开命令面板
 3. 输入 `Extensions: Install from VSIX`
-4. 选择项目目录下的 `windsurf-ask-continue-1.0.9.vsix` 文件
+4. 选择项目目录下的 `windsurf-ask-continue-1.1.0.vsix` 文件
 
 #### 步骤 3：配置 MCP
 
@@ -185,7 +185,7 @@ pip install -r requirements.txt
 ├── vscode-extension/        # Windsurf 扩展源码（TypeScript）
 ├── rules/                   # 规则模板
 │   └── example-windsurfrules.txt
-└── windsurf-ask-continue-1.0.9.vsix  # 打包好的扩展
+└── windsurf-ask-continue-1.1.0.vsix  # 打包好的扩展
 ```
 
 ---
