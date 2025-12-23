@@ -1,13 +1,23 @@
 {
   "name": "windsurf-ask-continue",
   "displayName": "Windsurf Ask Continue",
-  "description": "让 AI 对话永不结束 - 仅支持 Windsurf IDE",
-  "version": "1.1.0",
+  "description": "让 AI 对话永不结束 - 仅支持 Windsurf IDE | 二次开发: @1837620622",
+  "version": "1.3.0",
   "publisher": "Rhongomiant1227",
   "author": {
-    "name": "Rhongomiant1227",
-    "url": "https://github.com/Rhongomiant1227"
+    "name": "Rhongomiant1227 & 1837620622",
+    "url": "https://github.com/1837620622"
   },
+  "contributors": [
+    {
+      "name": "Rhongomiant1227 (原作者)",
+      "url": "https://github.com/Rhongomiant1227"
+    },
+    {
+      "name": "1837620622 (二次开发)",
+      "url": "https://github.com/1837620622"
+    }
+  ],
   "homepage": "https://github.com/Rhongomiant1227",
   "repository": {
     "type": "git",

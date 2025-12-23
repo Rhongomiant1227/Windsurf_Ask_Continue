@@ -295,7 +295,15 @@ async function showAskContinueDialog(request: AskRequest): Promise<void> {
           try {
             responseSent = true;
             lastPendingRequest = null; // 清除待处理请求
-            await sendResponseToMCP(request.requestId, message.text, false, request.callbackPort);
+            // 如果有图片，将base64数据附加到消息后面
+            let finalText = message.text;
+            if (message.images && message.images.length > 0) {
+              const imagesData = message.images.map((img: any, i: number) => 
+                '[图片 ' + (i + 1) + ': ' + img.name + ']\n' + img.base64
+              ).join('\n\n');
+              finalText = finalText + '\n\n' + imagesData;
+            }
+            await sendResponseToMCP(request.requestId, finalText, false, request.callbackPort);
             panel.dispose();
           } catch (error) {
             responseSent = false;
@@ -323,6 +331,27 @@ async function showAskContinueDialog(request: AskRequest): Promise<void> {
             panel.dispose();
           } catch (error) {
             // Ignore errors on cancel
+          }
+          break;
+        case "readFile":
+          // 处理从文件资源管理器拖拽的文件读取请求
+          try {
+            const filePath = message.path;
+            if (filePath && fs.existsSync(filePath)) {
+              const fileContent = fs.readFileSync(filePath);
+              const base64 = `data:image/${path.extname(filePath).slice(1)};base64,${fileContent.toString('base64')}`;
+              const fileName = path.basename(filePath);
+              const fileSize = fs.statSync(filePath).size;
+              panel.webview.postMessage({
+                command: 'fileContent',
+                type: message.type,
+                base64: base64,
+                name: fileName,
+                size: fileSize
+              });
+            }
+          } catch (err) {
+            console.error('[Ask Continue] Failed to read file:', err);
           }
           break;
       }
@@ -554,6 +583,27 @@ function getWebviewContent(reason: string, requestId: string): string {
       font-size: 11px;
       color: var(--vscode-descriptionForeground, #888888);
     }
+    .file-preview {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--vscode-editor-background, #1e1e1e);
+      border-radius: 4px;
+      max-width: 150px;
+      overflow: hidden;
+    }
+    .file-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    .file-name {
+      font-size: 11px;
+      color: var(--vscode-foreground, #cccccc);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .remove-all {
       background: var(--vscode-button-secondaryBackground, #3a3d41);
       color: var(--vscode-button-secondaryForeground, #ffffff);
@@ -599,7 +649,7 @@ function getWebviewContent(reason: string, requestId: string): string {
         <label><input type="radio" name="uploadType" value="path"> 仅路径</label>
       </div>
       <div class="upload-hint" id="dropZone">
-        <span id="dropText">📋 <span id="pasteKey">Ctrl</span>+V 粘贴图片 或 拖拽多张图片到此处 (支持多选)</span>
+        <span id="dropText">📋 <span id="pasteKey">Ctrl</span>+V 粘贴图片 或 拖拽文件到此处<br><small style="opacity: 0.7;">支持从左侧文件资源管理器直接拖拽</small></span>
         <div id="imagePreviewContainer" style="display: none;">
           <div class="images-grid" id="imagesGrid"></div>
           <div class="image-info" id="imageInfo"></div>
@@ -616,6 +666,11 @@ function getWebviewContent(reason: string, requestId: string): string {
     <div class="shortcuts">
       快捷键: <kbd>Enter</kbd> = 继续 | <kbd>Shift</kbd>+<kbd>Enter</kbd> = 换行 | <kbd>Esc</kbd> = 结束
     </div>
+    
+    <div class="footer" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--vscode-panel-border, #454545); font-size: 11px; color: var(--vscode-descriptionForeground, #888888); text-align: center;">
+      <div>二次开发 by <a href="https://github.com/1837620622" target="_blank" style="color: var(--vscode-textLink-foreground, #3794ff);">@1837620622</a></div>
+      <div style="margin-top: 5px;">如果觉得好用，请给个 ⭐ Star</div>
+    </div>
   </div>
   
   <script>
@@ -630,8 +685,9 @@ function getWebviewContent(reason: string, requestId: string): string {
     const imageInfo = document.getElementById('imageInfo');
     const removeAllBtn = document.getElementById('removeAllImages');
     
-    // 支持多张图片的数组
+    // 支持多张图片和文件的数组
     let imageList = [];
+    let fileList = [];  // 非图片文件列表
     
     // 检测Mac系统，更新快捷键提示（兼容多种检测方式）
     const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform) || /Mac/i.test(navigator.userAgent);
@@ -689,23 +745,107 @@ function getWebviewContent(reason: string, requestId: string): string {
       }
     });
     
-    // 拖拽放下 - 支持多张图片
+    // 拖拽放下 - 支持多张图片和从文件资源管理器拖拽
     dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
       dropZone.style.borderColor = '';
       dropZone.style.backgroundColor = '';
       
+      // 尝试获取 VS Code 资源管理器拖拽的文件 URI
+      const uriList = e.dataTransfer?.getData('text/uri-list');
+      if (uriList) {
+        const uris = uriList.split('\\n').filter(uri => uri.trim() && !uri.startsWith('#'));
+        for (const uri of uris) {
+          handleFileUri(uri.trim());
+        }
+        return;
+      }
+      
+      // 处理普通文件拖拽
       const files = e.dataTransfer?.files;
       if (files && files.length > 0) {
-        // 遍历所有文件，处理每张图片
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
           if (file.type.startsWith('image/')) {
             handleImageFile(file);
+          } else {
+            handleNonImageFile(file);
           }
         }
       }
     });
+    
+    // 处理从文件资源管理器拖拽的 URI
+    function handleFileUri(uri) {
+      // 移除 file:// 前缀
+      let filePath = uri;
+      if (uri.startsWith('file://')) {
+        filePath = decodeURIComponent(uri.replace('file://', ''));
+      }
+      
+      // 获取文件名
+      const fileName = filePath.split('/').pop() || filePath.split('\\\\').pop() || 'unknown';
+      const ext = fileName.split('.').pop()?.toLowerCase() || '';
+      
+      // 判断是否为图片
+      const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico'];
+      if (imageExts.includes(ext)) {
+        // 图片文件：发送消息给扩展读取文件内容
+        vscode.postMessage({ command: 'readFile', path: filePath, type: 'image' });
+      } else {
+        // 非图片文件
+        const fileData = {
+          path: filePath,
+          name: fileName,
+          ext: ext,
+          id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+          icon: getFileIcon(ext)
+        };
+        fileList.push(fileData);
+        updateImagePreview();
+      }
+    }
+    
+    // 处理非图片文件
+    function handleNonImageFile(file) {
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      const fileData = {
+        path: file.path || '',
+        name: file.name,
+        ext: ext,
+        size: file.size,
+        id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        icon: getFileIcon(ext)
+      };
+      fileList.push(fileData);
+      updateImagePreview();
+    }
+    
+    // 根据文件扩展名获取图标
+    function getFileIcon(ext) {
+      const icons = {
+        // 代码文件
+        'js': '📜', 'ts': '📘', 'jsx': '⚛️', 'tsx': '⚛️',
+        'py': '🐍', 'java': '☕', 'c': '🔧', 'cpp': '🔧', 'h': '🔧',
+        'cs': '🎯', 'go': '🔵', 'rs': '🦀', 'rb': '💎',
+        'php': '🐘', 'swift': '🍎', 'kt': '🎨', 'scala': '🔴',
+        'vue': '💚', 'svelte': '🔥', 'html': '🌐', 'css': '🎨',
+        'scss': '🎨', 'less': '🎨', 'json': '📋', 'xml': '📄',
+        'yaml': '📝', 'yml': '📝', 'toml': '⚙️', 'ini': '⚙️',
+        'sql': '🗃️', 'sh': '🖥️', 'bash': '🖥️', 'zsh': '🖥️',
+        'ps1': '🖥️', 'bat': '🖥️', 'cmd': '🖥️',
+        // 文档
+        'md': '📝', 'txt': '📄', 'doc': '📄', 'docx': '📄',
+        'pdf': '📕', 'xls': '📊', 'xlsx': '📊', 'ppt': '📽️', 'pptx': '📽️',
+        'csv': '📊', 'rtf': '📄',
+        // 压缩包
+        'zip': '📦', 'rar': '📦', 'tar': '📦', 'gz': '📦', '7z': '📦',
+        // 配置
+        'env': '🔒', 'gitignore': '🚫', 'dockerfile': '🐳',
+        'makefile': '🔨', 'cmake': '🔨'
+      };
+      return icons[ext] || '📄';
+    }
     
     // 处理单个图片文件 - 添加到图片列表
     function handleImageFile(file) {
@@ -723,9 +863,11 @@ function getWebviewContent(reason: string, requestId: string): string {
       reader.readAsDataURL(file);
     }
     
-    // 更新图片预览区域
+    // 更新图片和文件预览区域
     function updateImagePreview() {
-      if (imageList.length === 0) {
+      const totalItems = imageList.length + fileList.length;
+      
+      if (totalItems === 0) {
         dropText.style.display = 'block';
         imagePreviewContainer.style.display = 'none';
         dropZone.classList.remove('has-image');
@@ -737,28 +879,75 @@ function getWebviewContent(reason: string, requestId: string): string {
         dropZone.classList.add('has-image');
         
         // 生成图片预览HTML
-        imagesGrid.innerHTML = imageList.map((img, index) => 
-          '<div class="image-item" data-id="' + img.id + '">' +
+        let previewHtml = '';
+        
+        // 图片预览
+        previewHtml += imageList.map((img, index) => 
+          '<div class="image-item" data-id="' + img.id + '" data-type="image">' +
             '<img src="' + img.base64 + '" class="image-preview" title="' + img.name + '" />' +
-            '<button type="button" class="remove-single" data-index="' + index + '">✕</button>' +
+            '<button type="button" class="remove-single" data-type="image" data-index="' + index + '">✕</button>' +
           '</div>'
         ).join('');
         
-        // 显示图片数量和总大小
-        const totalSize = imageList.reduce((sum, img) => sum + img.size, 0);
-        imageInfo.textContent = '共 ' + imageList.length + ' 张图片 (' + formatFileSize(totalSize) + ')';
+        // 文件预览
+        previewHtml += fileList.map((file, index) => 
+          '<div class="image-item" data-id="' + file.id + '" data-type="file">' +
+            '<div class="file-preview" title="' + (file.path || file.name) + '">' +
+              '<span class="file-icon">' + file.icon + '</span>' +
+              '<span class="file-name">' + file.name + '</span>' +
+            '</div>' +
+            '<button type="button" class="remove-single" data-type="file" data-index="' + index + '">✕</button>' +
+          '</div>'
+        ).join('');
+        
+        imagesGrid.innerHTML = previewHtml;
+        
+        // 显示数量统计
+        let infoText = '';
+        if (imageList.length > 0) {
+          const totalImgSize = imageList.reduce((sum, img) => sum + (img.size || 0), 0);
+          infoText += imageList.length + ' 张图片';
+          if (totalImgSize > 0) infoText += ' (' + formatFileSize(totalImgSize) + ')';
+        }
+        if (fileList.length > 0) {
+          if (infoText) infoText += ' + ';
+          infoText += fileList.length + ' 个文件';
+        }
+        imageInfo.textContent = infoText;
         
         // 绑定单个删除按钮事件
         imagesGrid.querySelectorAll('.remove-single').forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
+            const type = btn.getAttribute('data-type');
             const index = parseInt(btn.getAttribute('data-index'));
-            imageList.splice(index, 1);
+            if (type === 'image') {
+              imageList.splice(index, 1);
+            } else {
+              fileList.splice(index, 1);
+            }
             updateImagePreview();
           });
         });
       }
     }
+    
+    // 接收扩展发来的文件内容
+    window.addEventListener('message', event => {
+      const message = event.data;
+      if (message.command === 'fileContent') {
+        if (message.type === 'image' && message.base64) {
+          const imageData = {
+            base64: message.base64,
+            name: message.name,
+            size: message.size || 0,
+            id: Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+          };
+          imageList.push(imageData);
+          updateImagePreview();
+        }
+      }
+    });
     
     // Format file size
     function formatFileSize(bytes) {
@@ -767,10 +956,11 @@ function getWebviewContent(reason: string, requestId: string): string {
       return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
     
-    // 移除全部图片
+    // 移除全部图片和文件
     removeAllBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       imageList = [];
+      fileList = [];
       updateImagePreview();
     });
     
@@ -781,18 +971,29 @@ function getWebviewContent(reason: string, requestId: string): string {
     function submitContinue() {
       let text = textarea.value.trim();
       
-      // 如果有图片，将所有图片附加到消息中
+      // 如果有图片，将所有图片以Markdown格式附加到消息中（便于AI识别和显示）
       if (imageList.length > 0) {
         const uploadType = document.querySelector('input[name="uploadType"]:checked')?.value || 'base64';
         if (uploadType === 'base64') {
           const imagesText = imageList.map((img, i) => 
-            '[图片 ' + (i + 1) + ': ' + img.name + ']\\n' + img.base64
-          ).join('\\n\\n');
+            '[已上传图片 ' + (i + 1) + ': ' + img.name + ' (' + formatFileSize(img.size) + ')]'
+          ).join('\\n');
+          // 图片base64数据通过postMessage传递，不在文本中显示
           text = (text ? text + '\\n\\n' : '') + imagesText;
         }
       }
       
-      vscode.postMessage({ command: 'continue', text: text || '继续', hasImage: imageList.length > 0, imageCount: imageList.length });
+      // 传递图片和文件数据给扩展后端处理
+      const images = imageList.map(img => ({ name: img.name, base64: img.base64, size: img.size }));
+      const files = fileList.map(f => ({ name: f.name, path: f.path, ext: f.ext }));
+      
+      // 附加文件路径信息到文本
+      if (fileList.length > 0) {
+        const filesText = fileList.map((f, i) => '[文件 ' + (i + 1) + ': ' + f.name + '] 路径: ' + f.path).join('\\n');
+        text = (text ? text + '\\n\\n' : '') + filesText;
+      }
+      
+      vscode.postMessage({ command: 'continue', text: text || '继续', hasImage: imageList.length > 0, imageCount: imageList.length, images: images, files: files });
     }
     
     function submitEnd() {
@@ -1025,13 +1226,13 @@ async function cleanupOldMcpProcesses(): Promise<void> {
  */
 function updateStatusBar(running: boolean, port?: number): void {
   if (running && port) {
-    statusBarItem.text = `$(check) Ask Continue: ${port}`;
-    statusBarItem.tooltip = `Ask Continue 正在运行 (端口 ${port})`;
+    statusBarItem.text = `$(check) Ask Continue: ${port} | @1837620622`;
+    statusBarItem.tooltip = `Ask Continue 正在运行 (端口 ${port})\n二次开发: github.com/1837620622`;
     statusBarItem.backgroundColor = undefined;
     statusViewProvider?.updateStatus(true, port);
   } else {
-    statusBarItem.text = "$(x) Ask Continue: 已停止";
-    statusBarItem.tooltip = "Ask Continue 未运行";
+    statusBarItem.text = "$(x) Ask Continue: 已停止 | @1837620622";
+    statusBarItem.tooltip = "Ask Continue 未运行\n二次开发: github.com/1837620622";
     statusBarItem.backgroundColor = new vscode.ThemeColor(
       "statusBarItem.errorBackground"
     );

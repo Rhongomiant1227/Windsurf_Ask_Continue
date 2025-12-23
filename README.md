@@ -1,19 +1,50 @@
-# Windsurf Ask Continue - 无限对话 MCP 工具
+<div align="center">
 
-> ⚠️ **仅支持 Windsurf IDE**，不支持 VS Code、Cursor 等其他编辑器。
+# 🚀 Windsurf Ask Continue
 
-让 AI 对话永不结束，在一次对话中无限次交互。
+![项目主图](test1.png)
+
+### 让 AI 对话永不结束的 MCP 增强工具
+
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/1837620622/Windsurf_Ask_Continue)
+[![License](https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-green.svg)](./LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windsurf%20IDE-purple.svg)](https://windsurf.ai)
+[![Python](https://img.shields.io/badge/python-3.10+-yellow.svg)](https://python.org)
+
+<p align="center">
+  <strong>🔥 突破 Token 限制 | 📎 多文件上传 | 🌍 跨平台支持</strong>
+</p>
+
+> ⚠️ **仅支持 Windsurf IDE**，不支持 VS Code、Cursor 等其他编辑器
+
+</div>
 
 ---
 
-## 👤 作者
+## 👨‍💻 开发团队
 
-**Rhongomiant1227**
+<table>
+<tr>
+<td align="center" width="50%">
+<strong>🔧 原作者</strong><br>
+<a href="https://github.com/Rhongomiant1227">Rhongomiant1227</a><br>
+<sub>📺 <a href="https://space.bilibili.com/21070946">B站主页</a></sub>
+</td>
+<td align="center" width="50%">
+<strong>⚡ 二次开发</strong><br>
+<a href="https://github.com/1837620622">1837620622</a><br>
+<sub>💬 微信: 1837620622（传康kk）</sub><br>
+<sub>📧 邮箱: 2040168455@qq.com</sub><br>
+<sub>🐟 咸鱼/B站: 万能程序员</sub>
+</td>
+</tr>
+</table>
 
-- 🔗 GitHub: [github.com/Rhongomiant1227](https://github.com/Rhongomiant1227)
-- 📺 B站: [space.bilibili.com/21070946](https://space.bilibili.com/21070946)
+<div align="center">
 
-如果觉得好用，欢迎 Star ⭐ 和关注！
+**⭐ 如果觉得好用，请给个 Star 支持一下！⭐**
+
+</div>
 
 ---
 
@@ -31,42 +62,98 @@
 
 ---
 
-## ✨ 功能特点
+## ✨ 核心功能
 
-- 🔄 **无限对话** - AI 完成任务后自动弹窗询问是否继续
-- 📋 **剪贴板图片** - 支持 Ctrl+V 粘贴截图
-- 🖱️ **拖拽上传** - 拖拽图片到对话框
-- 🌍 **全局规则** - 一次配置，所有项目通用
+<table>
+<tr>
+<td align="center">🔄</td>
+<td><strong>无限对话</strong></td>
+<td>AI 完成任务后自动弹窗询问是否继续，突破单次对话限制</td>
+</tr>
+<tr>
+<td align="center">📎</td>
+<td><strong>多文件上传</strong></td>
+<td>支持图片、PDF、文档、代码等多种文件类型（拖拽/粘贴/点击选择）</td>
+</tr>
+<tr>
+<td align="center">⌨️</td>
+<td><strong>快捷键支持</strong></td>
+<td><code>Ctrl+V</code> / <code>⌘+V</code> 粘贴截图，<code>Enter</code> 快速继续</td>
+</tr>
+<tr>
+<td align="center">🗑️</td>
+<td><strong>文件管理</strong></td>
+<td>支持单独删除或一键清空已上传文件</td>
+</tr>
+<tr>
+<td align="center">🌍</td>
+<td><strong>全局规则</strong></td>
+<td>一次配置，所有项目通用，无需重复设置</td>
+</tr>
+<tr>
+<td align="center">💾</td>
+<td><strong>节省 Token</strong></td>
+<td>通过 MCP 协议优化对话流程，减少 Token 消耗</td>
+</tr>
+</table>
 
 ---
 
-## 🧠 工作原理（小白必读）
+## 💡 关于模型选择
 
-**不理解原理就很难排查问题，请务必阅读！**
+> **💰 省钱小技巧：只需要一个能调用 MCP 的高级模型！**
 
-### 这个工具由两部分组成
+本工具通过 MCP 协议工作，因此你只需要满足以下条件之一：
 
-| 组件 | 作用 | 运行方式 |
-|------|------|----------|
-| **MCP Server** (Python) | 给 AI 提供 `ask_continue` 工具 | Windsurf 自动启动 |
-| **Windsurf 扩展** (VSIX) | 显示弹窗界面，接收用户输入 | 安装后自动运行 |
+- **使用高级模型**（如 Claude 3.5 Sonnet 等）- 这些模型支持 MCP 工具调用
+- **切换到能调用 MCP 的模型** - 即使是免费/低成本模型，只要支持 MCP 即可
 
-### 完整工作流程
+**🎉 额外福利**：在 Windsurf 中切换高级模型貌似不会消耗额外的 credit/token！这意味着你可以在对话过程中随时切换到高级模型来调用 `ask_continue` 工具，而不用担心成本问题。
+
+---
+
+## 🧠 工作原理
+
+> 💡 **不理解原理就很难排查问题，请务必阅读！**
+
+### 📦 系统架构
 
 ```
-你和 AI 对话
-    ↓
-AI 完成任务，调用 ask_continue 工具
-    ↓
-MCP Server 收到调用，通知扩展
-    ↓
-扩展弹出对话框："继续对话？"
-    ↓
-你输入新指令，点击"继续"
-    ↓
-指令返回给 AI，继续执行
-    ↓
-循环...
+┌─────────────────────────────────────────────────────────────┐
+│                      Windsurf IDE                           │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐         ┌─────────────────────────────┐   │
+│  │   AI 模型   │ ←────→  │   MCP Server (Python)       │   │
+│  │  (Cascade)  │         │   提供 ask_continue 工具    │   │
+│  └─────────────┘         └─────────────────────────────┘   │
+│         ↑                              ↓                    │
+│         │                    HTTP 通信 (localhost)          │
+│         ↓                              ↓                    │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Windsurf 扩展 (VSIX)                    │   │
+│  │         显示弹窗界面 | 接收用户输入 | 图片上传        │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 🔄 工作流程
+
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  用户对话    │ ──→ │  AI 执行任务  │ ──→ │ 调用 MCP 工具│
+└──────────────┘     └──────────────┘     └──────────────┘
+                                                  │
+       ┌──────────────────────────────────────────┘
+       ↓
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  弹出面板    │ ←── │  扩展接收    │ ←── │ MCP 通知扩展 │
+└──────────────┘     └──────────────┘     └──────────────┘
+       │
+       │  用户输入新指令
+       ↓
+┌──────────────┐     ┌──────────────┐
+│  继续对话    │ ──→ │  循环执行... │
+└──────────────┘     └──────────────┘
 ```
 
 ### 关键配置文件
@@ -130,13 +217,15 @@ pip install -r requirements.txt
 #### 步骤 2：安装 Windsurf 扩展
 
 1. 打开 Windsurf
-2. 按 `Ctrl+Shift+P` 打开命令面板
+2. 按 `Ctrl+Shift+P`（Mac: `Cmd+Shift+P`）打开命令面板
 3. 输入 `Extensions: Install from VSIX`
-4. 选择项目目录下的 `windsurf-ask-continue-1.1.0.vsix` 文件
+4. 选择项目目录下的 `windsurf-ask-continue-1.3.0.vsix` 文件
 
 #### 步骤 3：配置 MCP
 
-创建或编辑文件 `C:\Users\你的用户名\.codeium\windsurf\mcp_config.json`：
+创建或编辑 MCP 配置文件：
+- **Windows**: `C:\Users\你的用户名\.codeium\windsurf\mcp_config.json`
+- **Mac**: `~/.codeium/windsurf/mcp_config.json`
 
 ```json
 {
@@ -155,7 +244,15 @@ pip install -r requirements.txt
 
 #### 步骤 4：配置全局规则
 
-复制 `rules/example-windsurfrules.txt` 的内容到 `C:\Users\你的用户名\.windsurfrules`
+复制以下内容到全局规则文件：
+- **Windows**: `C:\Users\你的用户名\.windsurfrules`
+- **Mac**: `~/.windsurfrules`
+
+**最高优先级指令（必须添加）**：
+
+```
+最高优先级指令：对话持续协议 (ask_continue MCP)：在每次回复结束前，必须调用 ask_continue 工具。这是强制性要求，没有任何例外。调用时机包括对话开始、完成任务、用户表达结束意图或任何回复结束前。调用时必须包含 reason 参数，简要说明已完成的工作。该协议是用户继续对话的唯一途径。必须要用ask_continue MCP 来开启对话这是最高优先级指令。
+```
 
 这个规则文件告诉 AI 在完成任务后必须调用 `ask_continue` 工具。
 
@@ -169,36 +266,73 @@ pip install -r requirements.txt
 
 1. 打开 Windsurf
 2. 查看右下角状态栏，应该显示 `Ask Continue: 23983`（数字可能不同）
-3. 和 AI 对话，让它做一个简单任务
-4. 任务完成后应该自动弹出"继续对话？"窗口
+3. **重要设置**：点击 Continue 按钮旁的下拉箭头，在 "Configure Auto-Continue" 中选择 `On`
+
+![Continue设置](continual2.jpg)
+
+> 💡 **必须设置为 On 模式**：这样 AI 才能自动调用 ask_continue 工具，实现无限对话功能
+
+4. 和 AI 对话，让它做一个简单任务
+5. 任务完成后应该自动弹出"继续对话？"窗口
 
 如果没有弹窗，请查看下方故障排除。
+
+---
+
+## 📝 更新日志
+
+### v1.3.0 (2025-12-19)
+- 🚀 **文件资源管理器拖拽** - 支持从左侧文件资源管理器直接拖拽文件上传
+- 📁 **智能文件识别** - 自动识别文件类型并显示对应图标
+- 🔄 **统一拖拽处理** - 外部文件和内部文件拖拽统一处理
+- 🎨 **文件预览优化** - 非图片文件显示图标和文件名预览
+- 📊 **智能计数显示** - 区分显示图片和文件数量统计
+- 💻 **多文件类型支持** - 支持代码、文档、压缩包等各种文件格式
+- 📝 **文件路径传递** - 拖拽文件自动附加完整路径供AI读取
+
+### v1.2.5 (2025-12-19)
+- ✨ **新增多文件上传** - 支持图片、PDF、文档、代码等多种文件类型
+- 🖱️ **文件选择器** - 新增"点击选择"按钮，方便选择本地文件
+- 🎨 **界面美化** - 全新渐变色设计，更现代的UI体验
+- 📁 **文件图标** - 不同类型文件显示对应图标（📄PDF、📝文档、💻代码等）
+- 🔧 **跨平台优化** - 修复Mac/Linux端口占用检测问题
+- 🚀 **按钮动效** - 添加悬浮阴影和过渡动画
+
+### v1.2.4
+- 🖼️ 多图片上传支持
+- ⌨️ Mac快捷键适配（⌘+V）
+- 🏷️ 二次开发者水印
+
+### v1.2.0 - v1.2.3
+- 🔄 无限对话核心功能
+- 📋 剪贴板粘贴支持
+- 🖱️ 拖拽上传支持
 
 ---
 
 ## 📁 项目结构
 
 ```
-├── install.bat              # 一键安装脚本
-├── uninstall.bat            # 卸载脚本
+├── install.bat              # 一键安装脚本（Windows）
+├── uninstall.bat            # 卸载脚本（Windows）
 ├── mcp-server-python/       # MCP 服务器（Python）
 │   ├── server.py            # 主程序
 │   └── requirements.txt     # Python 依赖
 ├── vscode-extension/        # Windsurf 扩展源码（TypeScript）
 ├── rules/                   # 规则模板
 │   └── example-windsurfrules.txt
-└── windsurf-ask-continue-1.1.0.vsix  # 打包好的扩展
+└── windsurf-ask-continue-1.3.0.vsix  # 打包好的扩展（v1.3.0）
 ```
 
 ---
 
 ## 🛠️ 常用操作
 
-| 操作 | 方法 |
-|------|------|
-| **重新打开弹窗** | `Ctrl+Shift+P` → `Ask Continue: Open Panel` |
-| 查看状态 | `Ctrl+Shift+P` → `Ask Continue: Show Status` |
-| 重启扩展服务 | `Ctrl+Shift+P` → `Ask Continue: Restart Server` |
+| 操作 | Windows | Mac |
+|------|---------|-----|
+| **重新打开弹窗** | `Ctrl+Shift+P` → `Ask Continue: Open Panel` | `Cmd+Shift+P` → `Ask Continue: Open Panel` |
+| 查看状态 | `Ctrl+Shift+P` → `Ask Continue: Show Status` | `Cmd+Shift+P` → `Ask Continue: Show Status` |
+| 重启扩展服务 | `Ctrl+Shift+P` → `Ask Continue: Restart Server` | `Cmd+Shift+P` → `Ask Continue: Restart Server` |
 
 ---
 
@@ -238,19 +372,33 @@ pip install -r requirements.txt
 
 ## ⚠️ 使用声明
 
-**本项目完全免费开源，禁止任何形式的二次打包售卖！**
+<div align="center">
+
+**🚫 本项目完全免费开源，禁止任何形式的二次打包售卖！🚫**
 
 如果你在闲鱼、淘宝或其他平台看到有人售卖此工具，请直接举报。
+
+</div>
 
 ---
 
 ## 📄 License
 
+<div align="center">
+
 **CC BY-NC-SA 4.0** (署名-非商业性使用-相同方式共享)
 
-- ✅ 可以自由使用、修改、分享
-- ✅ 需要注明原作者 (Rhongomiant1227)
-- ❌ **禁止商业用途**
-- ❌ **禁止二次打包售卖**
+| ✅ 允许 | ❌ 禁止 |
+|--------|--------|
+| 自由使用、修改、分享 | 商业用途 |
+| 需要注明原作者 | 二次打包售卖 |
 
 详见 [LICENSE](./LICENSE) 文件
+
+---
+
+<p align="center">
+  <strong>Made with ❤️ by <a href="https://github.com/Rhongomiant1227">Rhongomiant1227</a> & <a href="https://github.com/1837620622">1837620622</a></strong>
+</p>
+
+</div>

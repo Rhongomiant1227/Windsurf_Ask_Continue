@@ -105,7 +105,8 @@ def start_callback_server():
             server.serve_forever()
             break
         except OSError as e:
-            if e.errno == 10048:  # Windows: 端口被占用
+            # 端口被占用: Windows=10048, Mac/Linux=48或98
+            if e.errno in (10048, 48, 98):
                 print(f"[MCP] 端口 {port} 被占用，尝试 {port + 1}", file=sys.stderr)
                 port += 1
             else:
@@ -284,49 +285,61 @@ async def main():
                         )
                     ]
                 
-                # 解析用户输入，分离文本和图片
+                # 解析用户输入，分离文本和文件
                 result = []
-                text_parts = []
+                import re
                 
-                # 检查是否包含图片数据
-                if "[图片已附加]" in user_input:
-                    parts = user_input.split("[图片已附加]")
-                    if parts[0].strip():
-                        text_parts.append(parts[0].strip())
-                    
-                    # 处理图片部分
-                    image_data = parts[1].strip() if len(parts) > 1 else ""
-                    
-                    # 分割多个图片（以 data:image 开头）
-                    import re
-                    images = re.findall(r'data:image/([^;]+);base64,([^\s]+)', image_data)
+                # 检查是否包含文件数据（图片或其他文件）
+                # 匹配 [图片 X: name] 或 [文件 X: name] 后跟 data:xxx;base64,xxx
+                file_pattern = r'\[(图片|文件) \d+: ([^\]]+)\]\n(data:[^;]+;base64,[^\s]+)'
+                matches = re.findall(file_pattern, user_input)
+                
+                if matches:
+                    # 提取纯文本部分（移除文件数据）
+                    text_only = re.sub(file_pattern, '', user_input).strip()
+                    # 移除 [已上传图片/文件 X: xxx] 标记
+                    text_only = re.sub(r'\[已上传(图片|文件) \d+: [^\]]+\]', '', text_only).strip()
                     
                     # 添加文本内容
-                    if text_parts:
+                    if text_only:
                         result.append(TextContent(
                             type="text",
-                            text=f"用户希望继续，并提供了以下指令：\n\n{' '.join(text_parts)}",
+                            text=f"用户希望继续，并提供了以下指令：\n\n{text_only}",
                         ))
                     else:
                         result.append(TextContent(
                             type="text",
-                            text="用户希望继续，并附加了图片：",
+                            text="用户希望继续，并附加了文件：",
                         ))
                     
-                    # 添加图片内容
-                    for mime_subtype, base64_data in images:
-                        result.append(ImageContent(
-                            type="image",
-                            data=base64_data,
-                            mimeType=f"image/{mime_subtype}",
-                        ))
+                    # 处理每个文件
+                    for file_type, file_name, data_url in matches:
+                        # 解析 data URL
+                        data_match = re.match(r'data:([^;]+);base64,(.+)', data_url)
+                        if data_match:
+                            mime_type = data_match.group(1)
+                            base64_data = data_match.group(2)
+                            
+                            if mime_type.startswith('image/'):
+                                # 图片使用 ImageContent
+                                result.append(ImageContent(
+                                    type="image",
+                                    data=base64_data,
+                                    mimeType=mime_type,
+                                ))
+                            else:
+                                # 非图片文件，以文本形式展示
+                                result.append(TextContent(
+                                    type="text",
+                                    text=f"\n[附件: {file_name}]\n类型: {mime_type}\n内容(Base64): {base64_data[:100]}...(已截断)",
+                                ))
                     
                     result.append(TextContent(
                         type="text",
                         text="\n\n⚠️【强制提醒】请立即执行用户指令。完成后你【必须】再次调用 ask_continue 工具，这是强制要求，不可跳过！",
                     ))
                 else:
-                    # 没有图片，只有文本
+                    # 没有文件，只有文本
                     result.append(TextContent(
                         type="text",
                         text=f"用户希望继续，并提供了以下指令：\n\n{user_input}\n\n⚠️【强制提醒】请立即执行以上指令。完成后你【必须】再次调用 ask_continue 工具，这是强制要求，不可跳过！",
