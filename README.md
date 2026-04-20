@@ -11,7 +11,6 @@
 **Rhongomiant1227**
 
 - 🔗 GitHub: [github.com/Rhongomiant1227](https://github.com/Rhongomiant1227)
-- 📺 B站: [space.bilibili.com/21070946](https://space.bilibili.com/21070946)
 
 如果觉得好用，欢迎 Star ⭐ 和关注！
 
